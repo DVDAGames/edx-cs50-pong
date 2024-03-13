@@ -26,12 +26,26 @@ Paddle = Class{}
     have their own x, y, width, and height values, thus serving as containers
     for data. In this sense, they're very similar to structs in C.
 ]]
-function Paddle:init(x, y, width, height)
+function Paddle:init(x, y, width, height, ai)
     self.x = x
     self.y = y
     self.width = width
     self.height = height
     self.dy = 0
+
+    if ai == nil then
+        self.ai = false
+    else
+        self.ai = ai
+    end
+end
+
+function Paddle:isAi(ai)
+    if ai == nil then
+        self.ai = false
+    else
+        self.ai = ai
+    end
 end
 
 function Paddle:update(dt)

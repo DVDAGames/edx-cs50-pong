@@ -90,8 +90,8 @@ function love.load()
 
     -- initialize our player paddles; make them global so that they can be
     -- detected by other functions and modules
-    player1 = Paddle(10, 30, 5, 20)
-    player2 = Paddle(VIRTUAL_WIDTH - 10, VIRTUAL_HEIGHT - 30, 5, 20)
+    player1 = Paddle(10, 30, 5, 20, true)
+    player2 = Paddle(VIRTUAL_WIDTH - 10, VIRTUAL_HEIGHT - 30, 5, 20, true)
 
     -- place a ball in the middle of the screen
     ball = Ball(VIRTUAL_WIDTH / 2 - 2, VIRTUAL_HEIGHT / 2 - 2, 4, 4)
@@ -109,11 +109,13 @@ function love.load()
     winningPlayer = 0
 
     -- the state of our game; can be any of the following:
-    -- 1. 'start' (the beginning of the game, before first serve)
-    -- 2. 'serve' (waiting on a key press to serve the ball)
-    -- 3. 'play' (the ball is in play, bouncing between paddles)
-    -- 4. 'done' (the game is over, with a victor, ready for restart)
-    gameState = 'start'
+    -- 1. 'p1' (player 1 joining)
+    -- 2. 'p2' (player 2 joining)
+    -- 3. 'start' (the beginning of the game, before first serve)
+    -- 4. 'serve' (waiting on a key press to serve the ball)
+    -- 5. 'play' (the ball is in play, bouncing between paddles)
+    -- 6. 'done' (the game is over, with a victor, ready for restart)
+    gameState = 'p1'
 end
 
 --[[
@@ -233,21 +235,43 @@ function love.update(dt)
     -- paddles can move no matter what state we're in
     --
     -- player 1
-    if love.keyboard.isDown('w') then
-        player1.dy = -PADDLE_SPEED
-    elseif love.keyboard.isDown('s') then
-        player1.dy = PADDLE_SPEED
+    if player1.ai then
+        -- TODO: make the AI movement more smooth instead of janky
+        if ball.y < player1.y - ball.height / 2 then
+            player1.dy = -PADDLE_SPEED
+        elseif ball.y > player1.y + ball.height / 2 then
+            player1.dy = PADDLE_SPEED
+        else
+            player1.dy = 0
+        end
     else
-        player1.dy = 0
+        if love.keyboard.isDown('w') then
+            player1.dy = -PADDLE_SPEED
+        elseif love.keyboard.isDown('s') then
+            player1.dy = PADDLE_SPEED
+        else
+            player1.dy = 0
+        end
     end
 
     -- player 2
-    if love.keyboard.isDown('up') then
-        player2.dy = -PADDLE_SPEED
-    elseif love.keyboard.isDown('down') then
-        player2.dy = PADDLE_SPEED
+    if player2.ai then
+        -- TODO: make the AI movement more smooth instead of janky
+        if ball.y < player2.y - ball.height / 2 then
+            player2.dy = -PADDLE_SPEED
+        elseif ball.y > player2.y + ball.height / 2 then
+            player2.dy = PADDLE_SPEED
+        else
+            player2.dy = 0
+        end
     else
-        player2.dy = 0
+        if love.keyboard.isDown('up') then
+            player2.dy = -PADDLE_SPEED
+        elseif love.keyboard.isDown('down') then
+            player2.dy = PADDLE_SPEED
+        else
+            player2.dy = 0
+        end
     end
 
     -- update our ball based on its DX and DY only if we're in play state;
@@ -273,8 +297,18 @@ function love.keypressed(key)
         love.event.quit()
     -- if we press enter during either the start or serve phase, it should
     -- transition to the next appropriate state
+    elseif key == 'space' then
+        if gameState == 'p1' then
+            player1:isAi(false)
+            gameState = 'p2'
+        elseif gameState == 'p2' then
+            player2:isAi(false)
+            gameState = 'start'
+        end
     elseif key == 'enter' or key == 'return' then
-        if gameState == 'start' then
+        if gameState == 'p1' or gameState == 'p2' then
+            gameState = 'start'
+        elseif gameState == 'start' then
             gameState = 'serve'
         elseif gameState == 'serve' then
             gameState = 'play'
@@ -310,7 +344,17 @@ function love.draw()
     love.graphics.clear(40/255, 45/255, 52/255, 255/255)
     
     -- render different things depending on which part of the game we're in
-    if gameState == 'start' then
+    if gameState == 'p1' then
+        love.graphics.setFont(smallFont)
+        love.graphics.printf('Welcome to Pong!', 0, 10, VIRTUAL_WIDTH, 'center')
+        love.graphics.printf('Player 1 Press Spacebar to Join', 0, 20, VIRTUAL_WIDTH, 'center')
+        love.graphics.printf('Press Enter for AI', 0, 30, VIRTUAL_WIDTH, 'center')
+    elseif gameState == 'p2' then
+        love.graphics.setFont(smallFont)
+        love.graphics.printf('Welcome to Pong!', 0, 10, VIRTUAL_WIDTH, 'center')
+        love.graphics.printf('Player 2 Press Spacebar to Join', 0, 20, VIRTUAL_WIDTH, 'center')
+        love.graphics.printf('Player 1 Press Enter to play AI.', 0, 30, VIRTUAL_WIDTH, 'center')
+    elseif gameState == 'start' then
         -- UI messages
         love.graphics.setFont(smallFont)
         love.graphics.printf('Welcome to Pong!', 0, 10, VIRTUAL_WIDTH, 'center')
