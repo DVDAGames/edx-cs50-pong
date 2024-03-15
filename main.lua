@@ -236,10 +236,9 @@ function love.update(dt)
     --
     -- player 1
     if player1.ai then
-        -- TODO: make the AI movement more smooth instead of janky
-        if ball.y < player1.y - ball.height / 2 then
+        if ball.y + ball.height < player1.y then
             player1.dy = -PADDLE_SPEED
-        elseif ball.y > player1.y + ball.height / 2 then
+        elseif ball.y > player1.y + player1.height then
             player1.dy = PADDLE_SPEED
         else
             player1.dy = 0
@@ -256,10 +255,9 @@ function love.update(dt)
 
     -- player 2
     if player2.ai then
-        -- TODO: make the AI movement more smooth instead of janky
-        if ball.y < player2.y - ball.height / 2 then
+        if ball.y + ball.height < player2.y then
             player2.dy = -PADDLE_SPEED
-        elseif ball.y > player2.y + ball.height / 2 then
+        elseif ball.y > player2.y + player2.height then
             player2.dy = PADDLE_SPEED
         else
             player2.dy = 0
