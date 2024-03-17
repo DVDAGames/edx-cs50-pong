@@ -90,8 +90,8 @@ function love.load()
 
     -- initialize our player paddles; make them global so that they can be
     -- detected by other functions and modules
-    player1 = Paddle(10, 30, 5, 20, true)
-    player2 = Paddle(VIRTUAL_WIDTH - 10, VIRTUAL_HEIGHT - 30, 5, 20, true)
+    player1 = Paddle(10, 30, 5, 20)
+    player2 = Paddle(VIRTUAL_WIDTH - 10, VIRTUAL_HEIGHT - 30, 5, 20)
 
     -- place a ball in the middle of the screen
     ball = Ball(VIRTUAL_WIDTH / 2 - 2, VIRTUAL_HEIGHT / 2 - 2, 4, 4)
@@ -116,6 +116,11 @@ function love.load()
     -- 5. 'play' (the ball is in play, bouncing between paddles)
     -- 6. 'done' (the game is over, with a victor, ready for restart)
     gameState = 'p1'
+
+    -- AI level
+    -- 1 is easy
+    -- 2 is regular
+    aiLevel = 2
 end
 
 --[[
@@ -231,17 +236,39 @@ function love.update(dt)
         end
     end
 
+    ball_center = ball.y + ball.height / 2
+
     --
     -- paddles can move no matter what state we're in
     --
     -- player 1
     if player1.ai then
-        if ball.y + ball.height < player1.y then
-            player1.dy = -PADDLE_SPEED
-        elseif ball.y > player1.y + player1.height then
-            player1.dy = PADDLE_SPEED
+        -- Normal AI
+        if player1.level > 1 then
+            player1_center = player1.y + player1.height / 2
+
+            if ball_center < player1_center then
+                player1.dy = -PADDLE_SPEED
+            elseif ball_center > player1_center then
+                player1.dy = PADDLE_SPEED
+            else
+                player1.dy = 0
+            end
+
+            if math.abs(ball_center - player1_center) < ball.height then
+                player1.dy = 0
+            end
+        -- Easy AI
         else
-            player1.dy = 0
+            player1_bottom = player1.y + player1.height
+
+            if ball_center < player1.y - ball.height * 0.75 then
+                player1.dy = -PADDLE_SPEED
+            elseif ball_center > player1_bottom + ball.height * 0.75 then
+                player1.dy = PADDLE_SPEED
+            else
+                player1.dy = 0
+            end
         end
     else
         if love.keyboard.isDown('w') then
@@ -255,12 +282,32 @@ function love.update(dt)
 
     -- player 2
     if player2.ai then
-        if ball.y + ball.height < player2.y then
-            player2.dy = -PADDLE_SPEED
-        elseif ball.y > player2.y + player2.height then
-            player2.dy = PADDLE_SPEED
+        -- Normal AI
+        if player2.level > 1 then
+            player2_center = player2.y + player2.height / 2
+
+            if ball_center < player2_center then
+                player2.dy = -PADDLE_SPEED
+            elseif ball_center > player2_center then
+                player2.dy = PADDLE_SPEED
+            else
+                player2.dy = 0
+            end
+
+            if math.abs(ball_center - player2_center) < ball.height then
+                player2.dy = 0
+            end
+        -- Easy AI
         else
-            player2.dy = 0
+            player2_bottom = player2.y + player2.height
+
+            if ball_center < player2.y - ball.height * 0.75 then
+                player2.dy = -PADDLE_SPEED
+            elseif ball_center > player2_bottom + ball.height * 0.75 then
+                player2.dy = PADDLE_SPEED
+            else
+                player2.dy = 0
+            end
         end
     else
         if love.keyboard.isDown('up') then
@@ -293,18 +340,30 @@ function love.keypressed(key)
     if key == 'escape' then
         -- the function LÖVE2D uses to quit the application
         love.event.quit()
+    -- set AI level to 1
+    elseif key == '1' then
+        if gameState == 'p1' or gameState == 'p2' then
+            aiLevel = 1
+        end
+    -- set AI level to 2
+    elseif key == '2' then
+        if gameState == 'p1' or gameState == 'p2' then
+            aiLevel = 2
+        end
     -- if we press enter during either the start or serve phase, it should
     -- transition to the next appropriate state
     elseif key == 'space' then
         if gameState == 'p1' then
-            player1:isAi(false)
             gameState = 'p2'
         elseif gameState == 'p2' then
-            player2:isAi(false)
             gameState = 'start'
         end
     elseif key == 'enter' or key == 'return' then
-        if gameState == 'p1' or gameState == 'p2' then
+        if gameState == 'p1' then
+            player1:isAI(true, aiLevel)
+            gameState = 'p2'
+        elseif gameState == 'p2' then
+            player2:isAI(true, aiLevel)
             gameState = 'start'
         elseif gameState == 'start' then
             gameState = 'serve'
@@ -340,18 +399,35 @@ function love.draw()
     push:apply('start')
 
     love.graphics.clear(40/255, 45/255, 52/255, 255/255)
-    
+
+    aiLevelText = {}
+    aiLevelText[1] = 'Easy'
+    aiLevelText[2] = 'Regular'
+
     -- render different things depending on which part of the game we're in
     if gameState == 'p1' then
         love.graphics.setFont(smallFont)
         love.graphics.printf('Welcome to Pong!', 0, 10, VIRTUAL_WIDTH, 'center')
-        love.graphics.printf('Player 1 Press Spacebar to Join', 0, 20, VIRTUAL_WIDTH, 'center')
-        love.graphics.printf('Press Enter for AI', 0, 30, VIRTUAL_WIDTH, 'center')
+        love.graphics.printf('Press Spacebar to Join as Player 1', 0, 20, VIRTUAL_WIDTH, 'center')
+        if aiLevel == 1 then
+            love.graphics.printf(string.format('Press 2 for %s AI', aiLevelText[2]), 0, 30, VIRTUAL_WIDTH, 'center')
+        else
+            love.graphics.printf(string.format('Press 1 for %s AI', aiLevelText[1]), 0, 30, VIRTUAL_WIDTH, 'center')
+        end
+
+        love.graphics.printf(string.format('Press Enter to Join as %s AI', aiLevelText[aiLevel]), 0, 40, VIRTUAL_WIDTH, 'center')
     elseif gameState == 'p2' then
         love.graphics.setFont(smallFont)
         love.graphics.printf('Welcome to Pong!', 0, 10, VIRTUAL_WIDTH, 'center')
-        love.graphics.printf('Player 2 Press Spacebar to Join', 0, 20, VIRTUAL_WIDTH, 'center')
-        love.graphics.printf('Player 1 Press Enter to play AI.', 0, 30, VIRTUAL_WIDTH, 'center')
+        love.graphics.printf('Press Spacebar to Join as Player 2', 0, 20, VIRTUAL_WIDTH, 'center')
+        
+        if aiLevel == 1 then
+            love.graphics.printf(string.format('Press 2 for %s AI', aiLevelText[2]), 0, 30, VIRTUAL_WIDTH, 'center')
+        else
+            love.graphics.printf(string.format('Press 1 for %s AI', aiLevelText[1]), 0, 30, VIRTUAL_WIDTH, 'center')
+        end
+        
+        love.graphics.printf(string.format('Press Enter to Join as %s AI', aiLevelText[aiLevel]), 0, 40, VIRTUAL_WIDTH, 'center')
     elseif gameState == 'start' then
         -- UI messages
         love.graphics.setFont(smallFont)
